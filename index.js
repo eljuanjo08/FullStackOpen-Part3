@@ -58,14 +58,42 @@ app.get("/api/persons/:id", (request, response) => {
   }
 });
 
-app.delete('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id);
-  console.log(id)
-  persons = persons.filter(person => person.id !== id)
-  console.log(persons)
+const generateId = () => {
+  return Math.floor(Math.random() * 1000000);
+};
 
-  response.status(204).end()
-})
+app.post("/api/persons", (request, response) => {
+  const body = request.body;
+
+  if (!body.name && !body.number) {
+    response.status(400).json({
+      error: "content missingg"
+    });
+  } else if (persons.find((p) => p.name === body.name)) {
+    response.status(400).json({
+      error: 'name must be unique'
+    });
+  } else {
+    const person = {
+      id: generateId(),
+      name: body.name,
+      number: body.number,
+    };
+
+    persons = persons.concat(person);
+
+    response.json(person);
+  }
+});
+
+app.delete("/api/persons/:id", (request, response) => {
+  const id = Number(request.params.id);
+  console.log(id);
+  persons = persons.filter((person) => person.id !== id);
+  console.log(persons);
+
+  response.status(204).end();
+});
 
 const PORT = 3001;
 app.listen(PORT, () => {
