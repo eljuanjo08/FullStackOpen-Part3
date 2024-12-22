@@ -1,111 +1,109 @@
 const express = require("express");
 const morgan = require("morgan");
-const cors = require("cors");
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(morgan("tiny"))
 
-morgan.token("body", (req) => {
-  return req.method === "POST" ? JSON.stringify(req.body) : "";
-});
+const middleware = (req, res, next) => {
+  console.log(req.body);
+  next();
+}
 
-const customFormat = ":method :url :status :response-time ms - :body";
+app.use(middleware)
 
-app.use(morgan(customFormat));
-
-let notes = [
+let persons = [
   {
     id: 1,
-    content: "HTML is easy",
-    important: true,
+    name: "Arto Hellas",
+    number: "040-123456",
   },
   {
     id: 2,
-    content: "Browser can execute only JavaScript",
-    important: false,
+    name: "Ada Lovelace",
+    number: "39-44-5323523",
   },
   {
     id: 3,
-    content: "GET and POST are the most important methods of HTTP protocol",
-    important: false,
+    name: "Dan Abramov",
+    number: "12-43-234345",
+  },
+  {
+    id: 4,
+    name: "Mary Poppendieck",
+    number: "39-23-6423122",
   },
 ];
 
-const generateId = () => {
-  const maxid = notes.length > 0 ? Math.max(...notes.map((p) => p.id)) : 0;
-  return maxid + 1;
-};
+const date = Date.now();
+const today = new Date(date);
 
-app.get("/api/notes", (req, res) => {
-  res.json(notes);
+app.get("/", (request, response) => {
+  response.send("<h1>Hola mundo</h1>");
 });
 
-app.get("/info", (req, res) => {
-  const hora = new Date();
-  res.send(
-    `<p>Phonebook has info for ${
-      notes.length
-    } people<br>${hora.toLocaleString()}</p>`
+app.get("/api/persons/", (request, response) => {
+  response.send(persons);
+});
+
+app.get("/info", (request, response) => {
+  console.log(date);
+  response.send(
+    `<p>
+      Phonebook has info for ${persons.length} people<br/>
+      ${today}
+    </p>`
   );
 });
 
-app.get("/api/notes/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const note = notes.find((n) => n.id === id);
+app.get("/api/persons/:id", (request, response) => {
+  const id = Number(request.params.id);
+  const person = persons.find((p) => p.id === id);
 
-  if (note) {
-    res.json(note);
+  if (person) {
+    response.json(person);
   } else {
-    res
-      .status(404)
-      .send(`<p>No se ha encontrado a la persona con el id ${id}</p>`);
+    response.status(404).end();
   }
 });
 
-app.delete("/api/notes/:id", (req, res) => {
-  const id = Number(req.params.id);
-  notes = notes.filter((p) => p.id !== id);
+const generateId = () => {
+  return Math.floor(Math.random() * 1000000);
+};
 
-  res.status(204).end();
-});
+app.post("/api/persons", (request, response) => {
+  const body = request.body;
 
-app.post("/api/notes/", (req, res) => {
-  const body = req.body;
-  const name = notes.find((p) => p.content === body.content);
-
-  if (!body.content) {
-    res.status(400).send("<p>Contenido no encontrado</p>");
-  } else if (name) {
-    res.status(400).send("<p>Nombre ya existente</p>");
+  if (!body.name && !body.number) {
+    response.status(400).json({
+      error: "content missingg"
+    });
+  } else if (persons.find((p) => p.name === body.name)) {
+    response.status(400).json({
+      error: 'name must be unique'
+    });
   } else {
-    const note = {
+    const person = {
       id: generateId(),
-      content: body.content,
-      important: body.important,
+      name: body.name,
+      number: body.number,
     };
 
-    notes = notes.concat(note);
-    res.json(note);
+    persons = persons.concat(person);
+
+    response.json(person);
   }
 });
 
-app.put('/api/notes/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const body = req.body;
-  const note = notes.find(n => n.id === id);
+app.delete("/api/persons/:id", (request, response) => {
+  const id = Number(request.params.id);
+  console.log(id);
+  persons = persons.filter((person) => person.id !== id);
+  console.log(persons);
 
-  if (!note) {
-    res.status(404).send('<p>Elemento no encontrado</p>')
-  } else {
-    const newNote = {
-      ...note,
-      important : body.important
-    }
-    notes = notes.map(n => n.id === id ? newNote : n)
-    res.json(newNote)
-  }
-})
+  response.status(204).end();
+});
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT);
-console.log("Lanzado en el puerto 3001");
+const PORT = 3001;
+app.listen(PORT, () => {
+  console.log(`server running in port ${PORT}`);
+});
